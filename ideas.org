@@ -1,0 +1,66 @@
+epf ::= (pf redir1 ... redirn )
+where pf is a process form and the rediri are redirection specs. A redirection spec is one of:
+(< [fdes] file-name)	Open file for read.
+(> [fdes] file-name)	Open file create/truncate.
+(<< [fdes] object)	Use object's printed rep.
+(>> [fdes] file-name)	Open file for append.
+(= fdes fdes/port)	Dup2
+(- fdes/port)	Close fdes/port.
+stdports	0,1,2 dup'd from standard ports.
+
+Process Forms:
+(begin . scheme-code)
+(| pf1 ... pfn)
+(|+ connect-list pf1 ... pfn)
+(epf . epf)
+(prog arg1 ... argn)
+
+
+; Run scheme-code in a fork.
+; Simple pipeline
+; Complex pipeline
+; An extended process form.
+; Default: exec the program.
+
+(exec-epf . epf)     --->     no return value         (syntax)
+(& . epf)     --->     proc         (syntax)
+(run . epf)     --->     status         (syntax)
+The (exec-epf . epf) form nukes the current process: it establishes the I/O redirections and then overlays the current process with the requested computation.
+The (& . epf) form is similar, except that the process is forked off in background. The form returns the subprocess' process object.
+
+The (run . epf) form runs the process in foreground: after forking off the computation, it waits for the subprocess to exit, and returns its exit status.
+
+These special forms are macros that expand into the equivalent series of system calls. The definition of the exec-epf macro is non-trivial, as it produces the code to handle I/O redirections and set up pipelines. However, the definitions of the & and run macros are very simple:
+
+(& . epf)	(fork (lambda () (exec-epf . epf)))
+(run . epf)	(wait (& . epf))
+
+Notation	  Procedure
+|           fork/pipe
+|+          fork/pipe+
+exec-epf    exec-path
+redirection	open, dup
+&	          fork
+run         wait + fork
+
+(run/port . epf)     --->     port         (syntax)
+(run/file . epf)     --->     string         (syntax)
+(run/string . epf)     --->     string         (syntax)
+(run/strings . epf)     --->     string list         (syntax)
+(run/sexp . epf)     --->     object         (syntax)
+(run/sexps . epf)     --->     list         (syntax)
+
+(run/port* thunk)     --->     port         (procedure)
+(run/file* thunk)     --->     string         (procedure)
+(run/string* thunk)     --->     string         (procedure)
+(run/strings* thunk)     --->     string list         (procedure)
+(run/sexp* thunk)     --->     object         (procedure)
+(run/sexps* thunk)     --->     object list         (procedure)
+
+For example, (run/port . epf) expands into
+(run/port* (lambda () (exec-epf . epf))).
+
+(port->string port)     --->     string         (procedure)
+(port->sexp-list port)     --->     list         (procedure)
+(port->string-list port)     --->     string list         (procedure)
+(port->list reader port)     --->     list         (procedure)
